@@ -1,5 +1,4 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe
-import ir.mahozad.manifest.ManifestMode
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -7,7 +6,7 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
 
     // Included (composite) build; see settings.gradle.kts files
-    id("ir.mahozad.compose-exe-manifest")
+    id("io.github.gleb-skobinsky.compose-exe-manifest")
 }
 
 composeExeManifest {

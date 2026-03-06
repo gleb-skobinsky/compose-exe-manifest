@@ -1,4 +1,4 @@
-package ir.mahozad.manifest
+package io.skobinsky.manifest
 
 import org.assertj.core.api.Assertions.assertThat
 import org.gradle.testfixtures.ProjectBuilder
@@ -23,7 +23,7 @@ class ExampleTest {
     fun greeterPluginAddsGreetingTaskToProject() {
         val project = ProjectBuilder.builder().build()
         // project.pluginManager.apply("org.jetbrains.compose")
-        project.pluginManager.apply("ir.mahozad.compose-exe-manifest")
+        project.pluginManager.apply("io.github.gleb-skobinsky.compose-exe-manifest")
         assertThat(project.tasks.getByName("embedManifestForCreateDistributable"))
             .isInstanceOf(EmbedTask::class.java)
     }
@@ -53,7 +53,7 @@ class ExampleTest {
         val buildContent = """
             plugins {
                 id("org.jetbrains.compose") version "1.6.11"
-                id("ir.mahozad.compose-exe-manifest")
+                id("io.github.gleb-skobinsky.compose-exe-manifest")
             }
         """
         (tempDir / "settings.gradle.kts").writeText(settingsContent)

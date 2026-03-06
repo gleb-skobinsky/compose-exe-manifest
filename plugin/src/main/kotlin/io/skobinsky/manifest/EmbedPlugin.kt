@@ -1,4 +1,4 @@
-package ir.mahozad.manifest
+package io.skobinsky.manifest
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project

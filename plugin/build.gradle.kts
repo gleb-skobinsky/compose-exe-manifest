@@ -8,7 +8,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
 }
 
-group = "ir.mahozad"
+group = "io.github.gleb-skobinsky"
 version = "1.0.0"
 
 dependencies {
@@ -29,8 +29,8 @@ tasks.withType<Test> {
 gradlePlugin {
     plugins {
         create("compose-exe-manifest") {
-            id = "ir.mahozad.compose-exe-manifest"
-            implementationClass = "ir.mahozad.manifest.EmbedPlugin"
+            id = "io.github.gleb-skobinsky.compose-exe-manifest"
+            implementationClass = "io.skobinsky.manifest.EmbedPlugin"
             description = "Embeds application manifest XML file in Compose Multiplatform desktop exe file"
             displayName = "Compose Exe Manifest"
             website = "https://github.com/mahozad/compose-exe-manifest"

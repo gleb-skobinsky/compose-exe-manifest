@@ -8,11 +8,11 @@ A Gradle plugin for [Compose Multiplatform][1] projects to embed a [manifest][2]
 ### Usage
 
 ```kotlin
-import ir.mahozad.manifest.ManifestMode
+import io.skobinsky.manifest.ManifestMode
 
 plugins {
     // ...
-    id("ir.mahozad.compose-exe-manifest") version "1.0.0"
+    id("io.github.gleb-skobinsky.compose-exe-manifest") version "1.0.0"
 }
 
 composeExeManifest {
