@@ -20,3 +20,4 @@ out/
 
 ### Mac OS ###
 .DS_Store
+/local.properties
