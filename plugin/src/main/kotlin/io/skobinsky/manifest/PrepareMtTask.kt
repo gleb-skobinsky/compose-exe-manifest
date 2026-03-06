@@ -9,13 +9,6 @@ abstract class PrepareMtTask : DefaultTask() {
     @get:OutputFile
     val mtExeFile = project.objects.fileProperty().value {
         temporaryDir.resolve("mt.exe")
-        // Could also have used the Gradle home directory like this:
-        // project
-        //     .gradle
-        //     .gradleUserHomeDir
-        //     .resolve("compose-exe-manifest")
-        //     .also(File::mkdir)
-        //     .resolve("mt.exe")
     }
 
     @TaskAction

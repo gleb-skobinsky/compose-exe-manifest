@@ -1,9 +1,11 @@
 package io.skobinsky.manifest
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.GradleException
 import org.gradle.api.file.Directory
+import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
@@ -16,72 +18,83 @@ import java.io.File
 abstract class EmbedTask : DefaultTask() {
 
     init {
-        group = "compose desktop" // Same group as CMP tasks
+        group = "compose desktop"
         description = "Embeds a manifest file in the app exe"
     }
 
-    @get:Input
-    lateinit var manifestMode: Provider<ManifestMode>
-
-    // It's not necessary to check for existence of the file or if it's a directory
-    // because Gradle automatically checks those for a field annotated with @InputFile.
     @get:InputFile
-    lateinit var manifestFile: Provider<File>
+    abstract val manifestFile: RegularFileProperty
 
     @get:InputFile
-    lateinit var mtExecutable: Provider<File>
+    abstract val mtExecutable: RegularFileProperty
 
     @get:InputDirectory
-    lateinit var exeDirectory: Provider<Directory>
+    abstract val exeDirectory: DirectoryProperty
 
-    @get:Optional // For non-Windows OSes that do not create app exe file
-    @get:OutputFile
-    val outputExeFile by lazy {
-        // OR to get a Provider could use exeDirectory.map { it.asFileTree }.filter {...}
-        exeDirectory.get().asFile.walk().maxDepth(2).firstOrNull { it.extension == "exe" }
-    }
+    /**
+     * The exe file that will be modified.
+     * Optional because non-Windows builds won't produce one.
+     */
+    @get:Optional
+    @get:InputFile
+    abstract val inputExeFile: RegularFileProperty
 
-    @get:Optional // For when the manifest mode is only embed
+    /**
+     * Output exe after manifest embedding.
+     * Usually identical to inputExeFile but Gradle needs explicit output.
+     */
+    @get:Optional
     @get:OutputFile
-    val outputManifestFile by lazy {
-        // OR to get a Provider could use outputExeFile.map { it.resolveSibling("${it.name}.manifest") }
-        outputExeFile?.resolveSibling("${outputExeFile?.name}.manifest")
-    }
+    abstract val outputExeFile: RegularFileProperty
 
     @TaskAction
-    fun execute() {
-        outputManifestFile?.delete()
-        val exeFile = outputExeFile
-            // Skips execution of the rest of the task code
-            ?: throw StopExecutionException("Did not find app exe file")
-        if (manifestMode.get().shouldEmbed) {
-            exeFile.temporaryWritable(::embedManifestIn)
-            logger.info("Embedded manifest in $exeFile")
-        } else {
-            val manifestCopyName = "${exeFile.name}.manifest"
-            val manifestCopyFile = exeFile.resolveSibling(manifestCopyName)
-            manifestFile.get().copyTo(manifestCopyFile, overwrite = true)
-            logger.info("Copied manifest to $manifestCopyFile")
-        }
-    }
+    fun embedManifest() {
 
-    private fun File.temporaryWritable(function: (File) -> Unit) {
-        setWritable(true)
-        function(this)
-        setWritable(false)
-    }
+        val exe = resolveExeFile() ?: throw StopExecutionException("No .exe file found")
 
-    private fun embedManifestIn(exe: File) {
-        ProcessBuilder()
-            .command(
-                mtExecutable.get().absolutePath,
+        val mt = mtExecutable.get().asFile
+        val manifest = manifestFile.get().asFile
+
+        exe.setWritable(true)
+
+        val exit = try {
+            val process = ProcessBuilder(
+                mt.absolutePath,
                 "-nologo",
-                "-manifest", manifestFile.get().absolutePath,
-                "-outputresource:\"${exe.absolutePath};#1\""
+                "-manifest", manifest.absolutePath,
+                "-outputresource:${exe.absolutePath};#1"
             )
-            .directory(exe.parentFile)
-            .start()
-            .inputReader()
-            .forEachLine(logger::info)
+                .directory(exe.parentFile)
+                .redirectErrorStream(true)
+                .start()
+
+            process.inputStream.bufferedReader().forEachLine {
+                logger.lifecycle(it)
+            }
+
+            process.waitFor()
+        } finally {
+            exe.setWritable(false)
+        }
+
+        if (exit != 0) {
+            throw GradleException("mt.exe failed with exit code $exit")
+        }
+
+        logger.lifecycle("Manifest embedded into ${exe.name}")
+    }
+
+    /**
+     * Resolve exe lazily at execution time.
+     */
+    private fun resolveExeFile(): File? {
+
+        inputExeFile.orNull?.asFile?.let { return it }
+
+        val dir = exeDirectory.get().asFile
+
+        return dir.walk()
+            .maxDepth(3)
+            .firstOrNull { it.extension.equals("exe", true) }
     }
 }

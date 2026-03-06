@@ -1,4 +1,5 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe
+import org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -11,7 +12,6 @@ plugins {
 
 composeExeManifest {
     enabled = true
-    manifestMode = ManifestMode.EMBED
     manifestFile = file("example.manifest")
 }
 
@@ -23,11 +23,14 @@ compose.desktop {
     application {
         mainClass = "MainKt"
         nativeDistributions {
-            targetFormats(Exe)
+            targetFormats(Exe, Msi)
             packageVersion = "1.0.0"
             packageName = project.name
             buildTypes.release.proguard {
                 version = libs.versions.proguard.get()
+            }
+            windows {
+                dirChooser = true
             }
         }
     }
