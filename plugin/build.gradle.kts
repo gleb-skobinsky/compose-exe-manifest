@@ -1,3 +1,5 @@
+import org.gradle.plugin.compatibility.compatibility
+
 plugins {
     // Using the Plugin Publish plugin makes plugin publication possible.
     // It also in turn auto-applies the following two plugins:
@@ -9,7 +11,7 @@ plugins {
 }
 
 group = "io.github.gleb-skobinsky"
-version = "1.0.0"
+version = "1.0.1"
 
 dependencies {
     // Found the id of the plugin as described in https://stackoverflow.com/q/74221701
@@ -29,6 +31,11 @@ tasks.withType<Test> {
 gradlePlugin {
     plugins {
         create("compose-exe-manifest") {
+            compatibility {
+                features {
+                    configurationCache = true
+                }
+            }
             id = "io.github.gleb-skobinsky.compose-exe-manifest"
             implementationClass = "io.skobinsky.manifest.EmbedPlugin"
             description = "Embeds application manifest XML file in Compose Multiplatform desktop exe file"

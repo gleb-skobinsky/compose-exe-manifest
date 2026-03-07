@@ -2,7 +2,7 @@
 gradle = "8.10"
 kotlin = "2.3.10"
 proguard = "7.5.0"
-publish-plugin = "1.2.2"
+publish-plugin = "2.1.0"
 compose-multiplatform = "1.10.2"
 junit5 = "5.11.0"
 assertj = "3.26.3"
