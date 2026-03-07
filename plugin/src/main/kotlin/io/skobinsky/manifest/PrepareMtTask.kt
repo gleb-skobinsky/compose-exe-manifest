@@ -1,13 +1,14 @@
 package io.skobinsky.manifest
 
 import org.gradle.api.DefaultTask
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 
 abstract class PrepareMtTask : DefaultTask() {
 
     @get:OutputFile
-    val mtExeFile = project.objects.fileProperty().value {
+    val mtExeFile: RegularFileProperty = project.objects.fileProperty().value {
         temporaryDir.resolve("mt.exe")
     }
 

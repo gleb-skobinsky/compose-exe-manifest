@@ -1,10 +1,8 @@
 package io.skobinsky.manifest
 
-import org.gradle.api.file.Directory
 import org.gradle.api.file.FileSystemLocation
+import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Provider
-import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputFile
@@ -16,10 +14,6 @@ import javax.inject.Inject
 
 abstract class EmbedJPackageTask @Inject constructor(
     targetFormat: TargetFormat,
-    enabledProvider: Provider<Boolean>,
-    manifestFileProvider: Provider<File>,
-    exeDirectoryProvider: Provider<Directory>,
-    mtExecutableProvider: Provider<File>,
 ) : AbstractJPackageTask(targetFormat) {
 
     init {
@@ -27,23 +21,15 @@ abstract class EmbedJPackageTask @Inject constructor(
         description = "Embeds a manifest file in the app exe"
     }
 
-    override fun isEnabled(): Boolean = enabled.get()
-
     // -----------------------------
     // Inputs
     // -----------------------------
 
-    @get:Input
-    val enabled: Provider<Boolean> = enabledProvider
+    @get:InputFile
+    abstract val manifestFile: RegularFileProperty
 
     @get:InputFile
-    val manifestFile: Provider<File> = manifestFileProvider
-
-    @get:InputDirectory
-    val exeDirectory: Provider<Directory> = exeDirectoryProvider
-
-    @get:InputFile
-    val mtExecutable: Provider<File> = mtExecutableProvider
+    abstract val mtExecutable: RegularFileProperty
 
     // -----------------------------
     // Outputs
@@ -52,8 +38,7 @@ abstract class EmbedJPackageTask @Inject constructor(
     @get:Optional
     @get:OutputFile
     val outputExeFile: File?
-        get() = exeDirectory.get()
-            .asFile
+        get() = destinationDir.ioFile
             .walk()
             .maxDepth(2)
             .firstOrNull { it.extension.equals("exe", true) }
@@ -69,19 +54,21 @@ abstract class EmbedJPackageTask @Inject constructor(
 
     override fun prepareWorkingDir(inputChanges: InputChanges) {
         super.prepareWorkingDir(inputChanges)
-
+        val appName = packageName.get()
+        val wsfScript = getWsfScript(
+            appName = appName,
+            manifestFile = manifestFile.ioFile,
+            mtExecutable = mtExecutable.ioFile,
+        )
         val resourcesDir = jpackageResources.ioFile
         resourcesDir.mkdirs()
-
-        val targetManifest = resourcesDir.resolve("app.manifest")
-
-        manifestFile.get().copyTo(targetManifest, overwrite = true)
-
-        logger.info("Copied manifest to jpackage resources: $targetManifest")
+        val wsfScriptFile = resourcesDir.resolve("$appName-post-image.wsf")
+        wsfScriptFile.writeText(wsfScript)
+        println("jpackageResources after prep: \n${jpackageResources.ioFile.list().joinToString("\n")}")
     }
 
     // -----------------------------
-    // Helpers
+    // Helper
     // -----------------------------
 
     private fun File.temporaryWritable(function: (File) -> Unit) {
@@ -95,12 +82,11 @@ abstract class EmbedJPackageTask @Inject constructor(
     }
 
     private fun embedManifestIn(exe: File) {
-
         val process = ProcessBuilder(
-            mtExecutable.get().absolutePath,
+            mtExecutable.ioFile.absolutePath,
             "-nologo",
             "-manifest",
-            manifestFile.get().absolutePath,
+            manifestFile.get().asFile.absolutePath,
             "-outputresource:${exe.absolutePath};#1"
         )
             .directory(exe.parentFile)
@@ -121,3 +107,97 @@ abstract class EmbedJPackageTask @Inject constructor(
     private val <T : FileSystemLocation> Provider<T>.ioFile: File
         get() = get().asFile
 }
+
+private fun getWsfScript(
+    appName: String,
+    mtExecutable: File,
+    manifestFile: File,
+): String {
+    val manifestPath = manifestFile.normalizedPath()
+    val mtPath = mtExecutable.normalizedPath()
+
+    return """
+        <package>
+          <job id="injectManifest">
+            <script language="JScript">
+
+        var shell = new ActiveXObject("WScript.Shell");
+        var fso   = new ActiveXObject("Scripting.FileSystemObject");
+        
+        var logStream = fso.OpenTextFile("C:\\temp\\jpackage-postimage.log", 8, true);
+
+        function log(msg) {
+            logStream.WriteLine("[post-image] " + msg);
+        }
+        
+        function dumpDir(path, indent) {
+            try {
+                var folder = fso.GetFolder(path);
+
+                var files = new Enumerator(folder.Files);
+                for (; !files.atEnd(); files.moveNext()) {
+                    var file = files.item();
+                    log(indent + "[FILE] " + file.Path);
+                }
+
+                var dirs = new Enumerator(folder.SubFolders);
+                for (; !dirs.atEnd(); dirs.moveNext()) {
+                    var sub = dirs.item();
+                    log(indent + "[DIR ] " + sub.Path);
+                    dumpDir(sub.Path, indent + "  ");
+                }
+
+            } catch (e) {
+                log("Directory dump error at " + path + ": " + e.message);
+            }
+        }
+
+        log("Script started");
+
+        var scriptDir = fso.GetParentFolderName(WScript.ScriptFullName);
+        var imageDir  = fso.GetParentFolderName(scriptDir);
+
+        var exePath = imageDir + "\\images\\win-msi.image\\$appName\\$appName.exe";
+        log("Expected launcher path = " + exePath);
+
+        var manifestPath = "$manifestPath";
+        log("Expected manifest path = " + manifestPath);
+
+        if (!fso.FileExists(exePath)) {
+            log("ERROR: launcher exe not found");
+            WScript.Quit(11);
+        }
+
+        if (!fso.FileExists(manifestPath)) {
+            log("ERROR: manifest not found");
+            WScript.Quit(12);
+        }
+
+        log("Files located successfully");
+
+        var cmd = "\"$mtPath\" -manifest \"" + manifestPath +
+                  "\" -outputresource:\"" + exePath + "\";#1";
+
+        log("Running command:");
+        log(cmd);
+
+        var result = shell.Run(cmd, 1, true);
+
+        log("mt.exe exit code = " + result);
+
+        if (result != 0) {
+            log("ERROR: manifest injection failed");
+            WScript.Quit(result);
+        }
+
+        log("Manifest successfully injected");
+        logStream.Flush();
+
+            </script>
+          </job>
+        </package>
+    """.trimIndent()
+}
+
+private fun File.normalizedPath() = absolutePath
+    .replace("\\", "\\\\")

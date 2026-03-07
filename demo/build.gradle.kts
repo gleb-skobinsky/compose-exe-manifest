@@ -25,7 +25,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(Exe, Msi)
             packageVersion = "1.0.0"
-            packageName = project.name
+            packageName = "DemoApp"
             buildTypes.release.proguard {
                 version = libs.versions.proguard.get()
             }
