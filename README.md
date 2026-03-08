@@ -1,23 +1,19 @@
-A Gradle plugin for [Compose Multiplatform][1] projects to embed a [manifest][2] in the app exe file.
+A Gradle plugin for [Compose Multiplatform][1] projects to embed a [manifest][2] in the app installer file.
 
 > [!NOTE]
-> The embedding only works for `create*Distributable` and `run*Distributable` tasks.  
-> The plugin currently does **NOT** work for packaging tasks (like `packageExe`).  
-> For `run*Distributable` tasks, start your terminal or IDE as administrator.
+> The embedding is aimed at Windows platform, thus only .exe and .msi installers are supported.  
+> To make the installer respect the manifest, use the task with prefix "...WithAppManifest", for example "packageMsiWithAppManifest".  
 
 ### Usage
 
 ```kotlin
-import io.skobinsky.manifest.ManifestMode
-
 plugins {
     // ...
-    id("io.github.gleb-skobinsky.compose-exe-manifest") version "1.0.0"
+    id("io.github.gleb-skobinsky.compose-exe-manifest") version "1.0.2"
 }
 
 composeExeManifest {
     enabled = true
-    manifestMode = ManifestMode.EMBED
     manifestFile = file("app.manifest") // Same directory as the build file
 }
 ```
