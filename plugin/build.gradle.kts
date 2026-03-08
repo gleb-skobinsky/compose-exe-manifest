@@ -11,7 +11,7 @@ plugins {
 }
 
 group = "io.github.gleb-skobinsky"
-version = "1.0.1"
+version = "1.0.2"
 
 dependencies {
     // Found the id of the plugin as described in https://stackoverflow.com/q/74221701

@@ -10,7 +10,7 @@ plugins {
     id("io.github.gleb-skobinsky.compose-exe-manifest")
 }
 
-composeExeManifest {
+windowsManifestForCompose {
     enabled = true
     manifestFile = file("example.manifest")
 }

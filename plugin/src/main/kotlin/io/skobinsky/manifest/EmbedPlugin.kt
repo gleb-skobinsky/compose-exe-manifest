@@ -14,7 +14,7 @@ abstract class EmbedPlugin : Plugin<Project> {
     override fun apply(project: Project) {
 
         val embedExtension = project.extensions.create(
-            "composeExeManifest",
+            "windowsManifestForCompose",
             EmbedExtension::class.java
         )
 
