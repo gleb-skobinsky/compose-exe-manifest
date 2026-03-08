@@ -1,7 +1,7 @@
 A Gradle plugin for [Compose Multiplatform][1] projects to embed a [manifest][2] in the app installer file.
 
 > [!NOTE]
-> The embedding is aimed at Windows platform, thus only .exe and .msi installers are supported.  
+> The embedding is aimed at Windows platform, therefore only .exe and .msi installers are supported.  
 > To make the installer respect the manifest, use the task with prefix "...WithAppManifest", for example "packageMsiWithAppManifest".  
 
 ### Usage
